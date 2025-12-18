@@ -9,7 +9,7 @@ public class Team {
     private String name;
     private ContinentEnum continent;
     List<Player> players = new ArrayList<Player>();
-
+public Team() {}
     public Team(int id, String name, ContinentEnum continent) {
         this.id = id;
         this.name = name;
@@ -34,6 +34,22 @@ public class Team {
 
     public Integer getPlayersCount() {
         return players.size();
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setContinent(ContinentEnum continent) {
+        this.continent = continent;
+    }
+
+    public void setPlayers(List<Player> players) {
+        this.players = players;
     }
 
     @Override
