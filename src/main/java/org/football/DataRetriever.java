@@ -18,11 +18,11 @@ public class DataRetriever {
         String sql = """
                 SELECT
                     team.id AS team_id, team.name AS team_name, team.continent, player.id AS player_id,
-                    player.name AS player_name, player.age AS age, player.position AS positions FROM team 
+                    player.name AS player_name, player.age AS age, player.position AS positions FROM team\s
                     LEFT JOIN player ON team.id = player.id_team
                 WHERE team.id = ?;
-                
-                """;
+               \s
+               \s""";
 
         try (PreparedStatement statement = connection.getDBConnection().prepareStatement(sql)) {
             statement.setInt(1, id);
@@ -124,17 +124,17 @@ public class DataRetriever {
         }
     }
 
-//    Team saveTeam(Team teamToSave) throws SQLException {
-//
-//        String sql = """
-//                SELECT team.id, team.name FROM team where id = ?;
-//                """;
-//
-//        try (PreparedStatement statement = connection.getDBConnection().prepareStatement(sql)) {
-//            statement.setInt(1, teamToSave.getId());
-//        }
-//        throw new RuntimeException();
-//    }
+    Team saveTeam(Team teamToSave) throws SQLException {
+
+        String sql = """
+                SELECT team.id, team.name FROM team where id = ?;
+                """;
+
+        try (PreparedStatement statement = connection.getDBConnection().prepareStatement(sql)) {
+            statement.setInt(1, teamToSave.getId());
+        }
+        throw new RuntimeException();
+    }
 
     List<Team> findTeamsByPlayerName(String playerName) throws SQLException {
 

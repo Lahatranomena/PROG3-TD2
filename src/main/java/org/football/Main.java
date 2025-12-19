@@ -9,23 +9,34 @@ public class Main {
         DBConnection dbc = new DBConnection();
         DataRetriever dr = new DataRetriever();
 
+        System.out.println(dr.findTeamById(1));
 
-        List<Player> newPlayers = new ArrayList<>();
-        Team team = new Team(6, "ASIATIC", ContinentEnum.ASIA);
-        Player player1 = new Player(5, "Nomena", 19, PlayerPositionEnum.GK, team);
-        Player player2 = new Player(6, "Lahatra", 20, PlayerPositionEnum.DEF, team   );
+        System.out.println(dr.findTeamById(5));
 
-        try {
-            List<Player> inserted = dr.createPlayers(newPlayers);
+        System.out.println(dr.findPlayers(1, 2));
 
-            System.out.println("Number of player inserted : " + inserted.size());
-            for (Player p : inserted) {
-                System.out.println("Days created : " + p.getName());
-            }
+        System.out.println(dr.findPlayers(3, 5));
 
-        } catch (RuntimeException e) {
-            System.out.println("Error during insertion : " + e.getMessage());
-        }
+        System.out.println(dr.findTeamsByPlayerName("an"));
+
+        System.out.println(dr.findPlayersByCriteria("ud",
+                PlayerPositionEnum.MIDF, "Madrid", ContinentEnum.EUROPA, 1, 10));
+
+        System.out.println(
+                dr.createPlayers(
+                        List.of(
+                                new Player(6, "Jude Bellingham", 23, PlayerPositionEnum.STR, null),
+                                new Player(7, "Pedri", 24, PlayerPositionEnum.MIDF, null)
+                        )
+                )
+        );
+
+        List<Player> result = dr.createPlayers(
+                List.of(
+                        new Player(6, "Vini", 25, PlayerPositionEnum.STR, null),
+                        new Player(7, "Pedri", 24, PlayerPositionEnum.MIDF, null)
+                )
+        );
 
 
     }
