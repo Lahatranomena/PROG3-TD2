@@ -41,9 +41,14 @@ public class DataRetriever {
                         player.setId(resultSet.getInt("player_id"));
                         player.setName(resultSet.getString("player_name"));
                         player.setAge(resultSet.getInt("age"));
-                        player.setPosition(
-                                PlayerPositionEnum.valueOf(resultSet.getString("positions"))
-                        );
+                        String pos = resultSet.getString("positions");
+
+                        if (pos != null) {
+                            player.setPosition(PlayerPositionEnum.valueOf(pos));
+                        } else {
+                            player.setPosition(null);
+                        }
+
 
                         players.add(player);
                     }
@@ -79,7 +84,6 @@ public class DataRetriever {
                     player.setPosition(
                             PlayerPositionEnum.valueOf(resultSet.getString("positions"))
                     );
-
                     players.add(player);
                 }
             }
