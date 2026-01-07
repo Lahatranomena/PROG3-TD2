@@ -53,11 +53,14 @@ import java.util.Objects;
         this.players = players;
     }
 
-        public int calculateTotalGoals() {
-            int total = 0;
-
+        public Integer getPlayersGoals() {
+            Integer total = 0;
+                try {
                 for (Player player : players) {
                     total += player.getGoalNb();
+                }
+                } catch (RuntimeException e) {
+                    System.out.println(e.getMessage());
                 }
             return total;
         }

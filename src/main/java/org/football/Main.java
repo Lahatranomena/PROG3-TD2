@@ -9,7 +9,11 @@ public class Main {
         DBConnection dbc = new DBConnection();
         DataRetriever dr = new DataRetriever();
 //
-        System.out.println(dr.findTeamById(1));
+        System.out.println(dr.findTeamById(1).getPlayersGoals());
+
+//        Team team = new Team();
+//        team.setId(1);
+//        System.out.println(dr.saveTeam(team).getPlayersGoals());
 //
 //        System.out.println(dr.findTeamById(5));
 //
