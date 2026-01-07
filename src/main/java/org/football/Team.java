@@ -4,17 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Team {
-    private int id;
-    private String name;
-    private ContinentEnum continent;
-    List<Player> players = new ArrayList<Player>();
-public Team() {}
-    public Team(int id, String name, ContinentEnum continent) {
-        this.id = id;
-        this.name = name;
-        this.continent = continent;
-    }
+    public class Team {
+        private int id;
+        private String name;
+        private ContinentEnum continent;
+        List<Player> players = new ArrayList<Player>();
+
+    public Team() {}
+        public Team(int id, String name, ContinentEnum continent) {
+            this.id = id;
+            this.name = name;
+            this.continent = continent;
+        }
 
     public int getId() {
         return id;
@@ -52,7 +53,16 @@ public Team() {}
         this.players = players;
     }
 
-    @Override
+        public int calculateTotalGoals() {
+            int total = 0;
+
+                for (Player player : players) {
+                    total += player.getGoalNb();
+                }
+            return total;
+        }
+
+        @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Team team = (Team) o;

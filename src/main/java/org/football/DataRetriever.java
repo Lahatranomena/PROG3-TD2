@@ -18,7 +18,8 @@ public class DataRetriever {
         String sql = """
                 SELECT
                     team.id AS team_id, team.name AS team_name, team.continent, player.id AS player_id,
-                    player.name AS player_name, player.age AS age, player.position AS positions FROM team\s
+                    player.name AS player_name, player.age AS age, player.position AS positions, 
+                    player.goal_nb FROM team\s
                     LEFT JOIN player ON team.id = player.id_team
                 WHERE team.id = ?;
                \s
@@ -41,6 +42,7 @@ public class DataRetriever {
                         player.setId(resultSet.getInt("player_id"));
                         player.setName(resultSet.getString("player_name"));
                         player.setAge(resultSet.getInt("age"));
+                        player.setGoalNb(resultSet.getInt("goal_nb"));
                         String pos = resultSet.getString("positions");
 
                         if (pos != null) {
@@ -67,7 +69,8 @@ public class DataRetriever {
 
         String sql = """
                 SELECT player.id AS player_id, player.name AS player_name, player.age AS
-                	age, player.position AS positions, player.id_team AS team FROM
+                	age, player.position AS positions, player.id_team AS team 
+                player.goal_nb FROM
                 	player LIMIT ? OFFSET ?;
                 """;
 
@@ -81,6 +84,7 @@ public class DataRetriever {
                     player.setId(resultSet.getInt("player_id"));
                     player.setName(resultSet.getString("player_name"));
                     player.setAge(resultSet.getInt("age"));
+                    player.setGoalNb(resultSet.getInt("goal_nb"));
                     player.setPosition(
                             PlayerPositionEnum.valueOf(resultSet.getString("positions"))
                     );
@@ -97,8 +101,8 @@ public class DataRetriever {
     List<Player> createPlayers(List<Player> newPlayers) {
 
         String insertQuery = """
-                   INSERT INTO player player.id AS player_id, player.name AS player_name,\s
-                   player.age AS age, player.position AS position VALUES (?, ?, ?, ?)
+                   INSERT INTO player(id, name, age, position, goal_nb)
+                       VALUES (?, ?, ?, ?::position_enum, ?)
                \s""";
 
         try (Connection conn = connection.getDBConnection()) {
@@ -116,12 +120,13 @@ public class DataRetriever {
                     statement.setInt(1, player.getId());
                     statement.setString(2, player.getName());
                     statement.setInt(3, player.getAge());
-                    statement.setString(4, player.getPosition().name());
+                    statement.setObject(4, player.getPosition(), java.sql.Types.OTHER);
+                    statement.setObject(5, player.getGoalNb());
                     statement.executeUpdate();
                 }
             }
             conn.commit();
-            System.out.println("Success");
+            System.out.println("Success: " + newPlayers);
             return newPlayers;
         } catch (Exception e) {
             throw new RuntimeException("Transaction cancel : ", e);
@@ -129,16 +134,44 @@ public class DataRetriever {
     }
 
     Team saveTeam(Team teamToSave) throws SQLException {
+        try (Connection conn = connection.getDBConnection()) {
+            conn.setAutoCommit(false);
 
-        String sql = """
-                SELECT team.id, team.name FROM team where id = ?;
-                """;
+            String updateSQL = "UPDATE player SET id_team = NULL WHERE id_team = ?";
+            try (PreparedStatement psUpdate = conn.prepareStatement(updateSQL)) {
+                psUpdate.setInt(1, teamToSave.getId());
+                psUpdate.executeUpdate();
+            }
 
-        try (PreparedStatement statement = connection.getDBConnection().prepareStatement(sql)) {
-            statement.setInt(1, teamToSave.getId());
+            String insertSQL = """
+            INSERT INTO player(id, name, age, position, id_team, goal_nb)
+            VALUES (?, ?, ?, ?::position_enum, ?)
+            ON CONFLICT (id)
+            DO UPDATE SET name = EXCLUDED.name, age = EXCLUDED.age,
+                          position = EXCLUDED.position, id_team = EXCLUDED.id_team
+        """;
+
+            try (PreparedStatement psInsert = conn.prepareStatement(insertSQL)) {
+                for (Player player : teamToSave.getPlayers()) {
+                    psInsert.setInt(1, player.getId());
+                    psInsert.setString(2, player.getName());
+                    psInsert.setInt(3, player.getAge());
+                    psInsert.setString(4, player.getPosition().name());
+                    psInsert.setInt(5, player.getGoalNb());
+                    psInsert.setInt(6, teamToSave.getId());
+                    psInsert.executeUpdate();
+                }
+            }
+
+            conn.commit();
+            return teamToSave;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Transaction cancel : ", e);
         }
-        throw new RuntimeException();
     }
+
+
 
     List<Team> findTeamsByPlayerName(String playerName) throws SQLException {
 
@@ -178,38 +211,45 @@ public class DataRetriever {
     }
 
 
-    List<Player> findPlayersByCriteria(String playerName, PlayerPositionEnum position, String teamName,
-            ContinentEnum continent, int page, int size
+    public List<Player> findPlayersByCriteria(
+            String playerName,
+            PlayerPositionEnum position,
+            String teamName,
+            ContinentEnum continent,
+            int page,
+            int size
     ) throws SQLException {
-        Team team = new Team();
-
         List<Player> players = new ArrayList<>();
-        StringBuilder sql = new StringBuilder("""
-                SELECT player.id AS player_id, player.name AS player_name, player.age AS age, player.position AS position,\s
-                team.name AS team FROM  player LEFT JOIN team ON player.id_team = team.id
-                where 1 = 1
-               \s""");
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT player.id AS player_id, player.name AS player_name, player.age AS age, " +
+                        "player.position AS position, player.goal_nb, team.name AS team, team.continent AS continent " +
+                        "FROM player " +
+                        "LEFT JOIN team ON player.id_team = team.id " +
+                        "WHERE 1=1 "
+        );
 
         List<Object> parameters = new ArrayList<>();
 
         if (playerName != null) {
-            sql.append("and player.name like ? ");
+            sql.append("AND player.name ILIKE ? ");
             parameters.add("%" + playerName + "%");
         }
         if (position != null) {
-            sql.append("and player.position = ? ");
-            parameters.add(position);
+            sql.append("AND player.position = ?::position_enum ");
+            parameters.add(position.toString());
         }
         if (teamName != null) {
-            sql.append("and team.name = ? ");
-            parameters.add(teamName);
+            sql.append("AND team.name ILIKE ? ");
+            parameters.add("%" + teamName + "%");
         }
         if (continent != null) {
-            sql.append("and player.position = ? ");
-            parameters.add(continent);
+            sql.append("AND team.continent = ?::continent_enum ");
+            parameters.add(continent.toString());
         }
-        sql.append("limit ? offset ?");
 
+
+        sql.append("LIMIT ? OFFSET ?");
         int offset = (page - 1) * size;
         parameters.add(size);
         parameters.add(offset);
@@ -218,23 +258,34 @@ public class DataRetriever {
              PreparedStatement statement = conn.prepareStatement(sql.toString())) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                statement.setObject(i + 1, parameters.get(i));
-            }
-            ResultSet rs = statement.executeQuery();
-            while (rs.next()) {
-                if (rs.getInt("player_id") != 0) {
-                    Player player = new Player();
-                    player.setId(rs.getInt("player_id"));
-                    player.setName(rs.getString("player_name"));
-                    player.setAge(rs.getInt("age"));
-                    player.setPosition(PlayerPositionEnum.valueOf(rs.getString("position")));
-                    team.setName(rs.getString("team"));
-                    player.setTeam(team);
-                    players.add(player);
+                Object param = parameters.get(i);
+                if (param instanceof Integer) {
+                    statement.setInt(i + 1, (Integer) param);
+                } else {
+                    statement.setString(i + 1, param.toString());
                 }
             }
+
+            ResultSet rs = statement.executeQuery();
+
+            while (rs.next()) {
+                Player player = new Player();
+                player.setId(rs.getInt("player_id"));
+                player.setName(rs.getString("player_name"));
+                player.setAge(rs.getInt("age"));
+                player.setPosition(PlayerPositionEnum.valueOf(rs.getString("position")));
+                player.setGoalNb(rs.getInt("goal_nb"));
+
+                Team team = new Team();
+                team.setName(rs.getString("team"));
+                player.setTeam(team);
+
+                players.add(player);
+            }
         }
+
         return players;
     }
+
 }
 
